@@ -106,18 +106,17 @@ class Level {
 	}
 
 	public function pushToBottom(column: Int) {
+		var jewels = new Array<Int>();
 		for (j in 0 ... boardH) {
-			var row = boardH - j - 1;
-			if (getCellValue(column, row) == -1) {
+			if (getCellValue(column, j) > -1)
+				jewels.push(getCellValue(column, j));
+		}
 
-				for (j2 in j + 1 ... boardH - 1) {
-					var row2 = boardH - j2 + 1;
-
-					setCellValue(column, row2, getCellValue(column, row2 - 1));
-				}
-
-				// meter null
-			}
+		for (j in 0 ... boardH) {
+			if (jewels.length > 0)
+				setCellValue(column, boardH - j - 1, jewels.pop());
+			else
+				setCellValue(column, boardH - j - 1, -1);
 		}
 	}
 }

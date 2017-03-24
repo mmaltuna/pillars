@@ -14,26 +14,30 @@ class Cursor extends FlxTypedGroup<FlxSprite> {
 	public var x: Int;
 	public var y: Int;
 
-	private var currentPermutation: Int;
 	private static var setSize: Int = 6;
+	private static var initX: Int = 2;
+	private static var initY: Int = -3;
 
 	public function new() {
 		super();
 
+		x = initX;
+		y = initY;
+
 		playState = PlayState.getInstance();
 		jewels = new Array<FlxSprite>();
 
-		var jewelA = new FlxSprite(PlayState.getPosX(0), PlayState.getPosY(0));
+		var jewelA = new FlxSprite(PlayState.getPosX(x), PlayState.getPosY(y));
 		jewelA.loadGraphic("assets/images/jewel-set-1.png", true, 8, 8);
 		jewelA.animation.frameIndex = Std.random(setSize);
 		add(jewelA);
 
-		var jewelB = new FlxSprite(PlayState.getPosX(0), PlayState.getPosY(1));
+		var jewelB = new FlxSprite(PlayState.getPosX(x), PlayState.getPosY(y + 1));
 		jewelB.loadGraphic("assets/images/jewel-set-1.png", true, 8, 8);
 		jewelB.animation.frameIndex = Std.random(setSize);
 		add(jewelB);
 
-		var jewelC = new FlxSprite(PlayState.getPosX(0), PlayState.getPosY(2));
+		var jewelC = new FlxSprite(PlayState.getPosX(x), PlayState.getPosY(y + 2));
 		jewelC.loadGraphic("assets/images/jewel-set-1.png", true, 8, 8);
 		jewelC.animation.frameIndex = Std.random(setSize);
 		add(jewelC);
@@ -46,35 +50,35 @@ class Cursor extends FlxTypedGroup<FlxSprite> {
 	}
 
 	public function move(x: Int, y: Int) {
-		if (x >= 0 && x < playState.level.boardW && y >= 0 && y < playState.level.boardH - 2) {
+		if (canMoveTo(x, y)) {
 			jewels[0].x = PlayState.getPosX(x);
-			jewels[0].y = PlayState.getPosX(y);
+			jewels[0].y = PlayState.getPosY(y);
 
 			jewels[1].x = PlayState.getPosX(x);
-			jewels[1].y = PlayState.getPosX(y + 1);
+			jewels[1].y = PlayState.getPosY(y + 1);
 
 			jewels[2].x = PlayState.getPosX(x);
-			jewels[2].y = PlayState.getPosX(y + 2);
+			jewels[2].y = PlayState.getPosY(y + 2);
 
 			this.x = x;
 			this.y = y;
-
-			if (isPlaced())
-				playState.status = PlayState.STATUS_SETTLING;
 		}
 	}
 
-	public function permute() {
-		if (currentPermutation % 3 == 0) {
-			invert();
-		} else {
-			shift();
-		}
+	public function step() {
+		if (!isPlaced()) {
+			jewels[0].y += PlayState.getStepSize();
+			jewels[1].y += PlayState.getStepSize();
+			jewels[2].y += PlayState.getStepSize();
 
-		currentPermutation = (currentPermutation + 1) % 6;
+			PlayState.middleStep = !PlayState.middleStep;
+
+			if (!PlayState.middleStep)
+				y++;
+		}
 	}
 
-	private function shift() {
+	public function shift() {
 		var jewel = jewels[2];
 
 		jewels[2].y = PlayState.getPosY(y);
@@ -86,17 +90,6 @@ class Cursor extends FlxTypedGroup<FlxSprite> {
 		jewels[0] = jewel;
 	}
 
-	private function invert() {
-		var jewel = jewels[2];
-
-		jewels[2].y = PlayState.getPosY(y);
-		jewels[1].y = PlayState.getPosY(y + 1);
-		jewels[0].y = PlayState.getPosY(y + 2);
-
-		jewels[2] = jewels[0];
-		jewels[0] = jewel;
-	}
-
 	public function isPlaced(): Bool {
 		if (y + 3 >= playState.level.boardH)
 			return true;
@@ -104,8 +97,19 @@ class Cursor extends FlxTypedGroup<FlxSprite> {
 		return playState.level.getCellValue(x, y + 3) >= 0;
 	}
 
+	public function canMoveTo(x: Int, y: Int): Bool {
+		var b: Bool = x >= 0 && x < playState.level.boardW && y < playState.level.boardH;
+
+		b = b && (y + 2 < playState.level.boardH);
+		b = b && playState.level.getCellValue(x, y) == -1;
+		b = b && playState.level.getCellValue(x, y + 1) == -1;
+		b = b && playState.level.getCellValue(x, y + 2) == -1;
+
+		return b;
+	}
+
 	public function reload() {
-		move(2, 0);
+		move(initX, initY);
 
 		jewels[0].animation.frameIndex = Std.random(setSize);
 		jewels[1].animation.frameIndex = Std.random(setSize);
@@ -113,6 +117,6 @@ class Cursor extends FlxTypedGroup<FlxSprite> {
 
 		playState.status = PlayState.STATUS_FALLING;
 
-		currentPermutation = 0;
+		PlayState.middleStep = false;
 	}
 }

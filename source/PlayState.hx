@@ -15,10 +15,12 @@ class PlayState extends FlxState {
 
 	public static var tileSize: Int = 8;
 	public static var borderSize: Int = 1;
+	public static var middleStep: Bool = false;
 
 	public static inline var STATUS_FALLING: Int = 0;
 	public static inline var STATUS_SETTLING: Int = 1;
 	public static inline var STATUS_PAUSED: Int = 2;
+	public static inline var STATUS_GAMEOVER: Int = 3;
 
 	private static var instance: PlayState = null;
 
@@ -28,7 +30,7 @@ class PlayState extends FlxState {
 
 	public var level: Level;
 
-	private var speed: Int = 1;		// speed = 1 => 1 step per second
+	private var speed: Float = 2;		// speed = 1 => 1 step per second
 
 	private var lastUpdated: Float = 0;
 
@@ -53,7 +55,6 @@ class PlayState extends FlxState {
 			board[i] = new Array<FlxSprite>();
 
 		cursor = new Cursor();
-		cursor.move(2, 0);
 		add(cursor);
 	}
 
@@ -88,18 +89,23 @@ class PlayState extends FlxState {
 			cursor.move(cursor.x - 1, cursor.y);
 		} else if (FlxG.keys.justPressed.RIGHT) {
 			cursor.move(cursor.x + 1, cursor.y);
+		} else if (FlxG.keys.justPressed.DOWN) {
+			cursor.step();
 		}
 
 		if (FlxG.keys.justPressed.SPACE) {
-			cursor.permute();
+			cursor.shift();
 		}
 
 		if (lastUpdated < (1.0 / speed)) {
 			lastUpdated += elapsed;
 		} else {
 			lastUpdated = 0;
-			cursor.move(cursor.x, cursor.y + 1);
+			cursor.step();
 		}
+
+		if (cursor.isPlaced())
+			status = STATUS_SETTLING;
 	}
 
 	public function onStatusSettling(elapsed: Float) {
@@ -112,10 +118,12 @@ class PlayState extends FlxState {
 			cursor.move(cursor.x - 1, cursor.y);
 		} else if (FlxG.keys.justPressed.RIGHT) {
 			cursor.move(cursor.x + 1, cursor.y);
+		} else if (FlxG.keys.justPressed.DOWN) {
+			lastUpdated = 1.0 / speed;
 		}
 
 		if (FlxG.keys.justPressed.SPACE) {
-			cursor.permute();
+			cursor.shift();
 		}
 
 		if (lastUpdated < (1.0 / speed)) {
@@ -124,11 +132,20 @@ class PlayState extends FlxState {
 			lastUpdated = 0;
 			settleCursor();
 
-			deleteCombos();
-			updateBoard();
+			var totalDeleted = 1;
+			while (totalDeleted > 0) {
+				totalDeleted = deleteCombos();
+				updateBoard();
+			}
 
-			cursor.reload();
+			if (!level.isInbounds(cursor.x, cursor.y))
+				status = STATUS_GAMEOVER;
+			else
+				cursor.reload();
 		}
+
+		if (!cursor.isPlaced())
+			status = STATUS_FALLING;
 	}
 
 	public function settleCursor() {
@@ -155,12 +172,14 @@ class PlayState extends FlxState {
 		level.setCellValue(cursor.x, cursor.y + 2, jewelC.animation.frameIndex);
 	}
 
-	public function deleteCombos() {
+	public function deleteCombos(): Int {
 		var jewelsToDelete = level.deleteCombos();
 		jewelsToDelete.forEach(function(pos) {
 			board[pos.x][pos.y].destroy();
 			board[pos.x][pos.y] = null;
 		});
+
+		return jewelsToDelete.size();
 	}
 
 	public function updateBoard() {
@@ -172,20 +191,19 @@ class PlayState extends FlxState {
 	}
 
 	private function pushToBottom(column: Int) {
-		var j = 0;
-		while (j < level.boardH) {
-			var row = level.boardH - j - 1;
-			if (board[column][row] == null) {
-				if (level.isInbounds(column, row - 1) && board[column][row - 1] != null) {
-					board[column][row] = board[column][row - 1];
-					board[column][row].x = getPosX(column);
-					board[column][row].y = getPosY(row);
-					board[column][row - 1] = null;
-					j--;
-				}
-			}
+		var sprites = new Array<FlxSprite>();
+		for (j in 0 ... level.boardH) {
+			if (board[column][j] != null)
+				sprites.push(board[column][j]);
+		}
 
-			j++;
+		for (j in 0 ... level.boardH) {
+			if (sprites.length > 0) {
+				board[column][level.boardH - j - 1] = sprites.pop();
+				board[column][level.boardH - j - 1].y = getPosY(level.boardH - j - 1);
+			}
+			else
+				board[column][level.boardH - j - 1] = null;
 		}
 	}
 
@@ -206,6 +224,10 @@ class PlayState extends FlxState {
 	}
 
 	public static function getPosY(y: Int): Float {
-		return borderSize + y * (tileSize + borderSize * 2);
+		return borderSize + y * (tileSize + borderSize * 2) + (middleStep ? getStepSize() : 0);
+	}
+
+	public static function getStepSize(): Float {
+		return tileSize / 2 + borderSize;
 	}
 }
