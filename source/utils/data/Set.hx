@@ -14,6 +14,12 @@ class Set<T> {
 			array.push(elem);
 	}
 
+	public function addAll(elems: Set<T>) {
+		elems.forEach(function (elem: T) {
+			add(elem);
+		});
+	}
+
 	public function contains(elem: T): Bool {
 		var found = false;
 		var i = 0;
@@ -37,5 +43,13 @@ class Set<T> {
 
 	public function clear() {
 		array.splice(0, array.length);
+	}
+
+	public function size(): Int {
+		return array.length;
+	}
+
+	public function isEmpty(): Bool {
+		return size() == 0;
 	}
 }

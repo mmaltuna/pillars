@@ -13,7 +13,7 @@ class TilePoint {
 	}
 
 	public static function equals(a: TilePoint, b: TilePoint): Bool {
-		return a.x == b.x && a.y == b.y;
+		return a != null && b != null && a.x == b.x && a.y == b.y;
 	}
 
 	public static function toFlxPoint(tilePoint: TilePoint): FlxPoint {
