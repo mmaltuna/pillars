@@ -4,15 +4,13 @@ import flixel.FlxSprite;
 import flixel.group.FlxGroup;
 
 class Cursor extends FlxTypedGroup<FlxSprite> {
-
-	public var jewels: Array<FlxSprite>;
 	private var outline: FlxSprite;
 	private var board: Board;
+	private var column: Column;
 
 	public var x: Int;
 	public var y: Int;
 
-	private static var setSize: Int = 6;
 	private static var initX: Int = 3;
 	private static var initY: Int = -2;
 
@@ -24,40 +22,18 @@ class Cursor extends FlxTypedGroup<FlxSprite> {
 		x = initX;
 		y = initY;
 
-		jewels = new Array<FlxSprite>();
+		column = new Column(board.getPosX(x), board.getPosY(y),
+			[Std.random(Board.setSize), Std.random(Board.setSize), Std.random(Board.setSize)]);
 
-		var jewelA = new FlxSprite(board.getPosX(x), board.getPosY(y));
-		jewelA.loadGraphic("assets/images/jewel-set-1.png", true, 8, 8);
-		jewelA.animation.frameIndex = Std.random(setSize);
-		add(jewelA);
-
-		var jewelB = new FlxSprite(board.getPosX(x), board.getPosY(y + 1));
-		jewelB.loadGraphic("assets/images/jewel-set-1.png", true, 8, 8);
-		jewelB.animation.frameIndex = Std.random(setSize);
-		add(jewelB);
-
-		var jewelC = new FlxSprite(board.getPosX(x), board.getPosY(y + 2));
-		jewelC.loadGraphic("assets/images/jewel-set-1.png", true, 8, 8);
-		jewelC.animation.frameIndex = Std.random(setSize);
-		add(jewelC);
-
-		jewels.push(jewelA);
-		jewels.push(jewelB);
-		jewels.push(jewelC);
+		for (member in column)
+			add(member);
 
 		reload();
 	}
 
 	public function move(x: Int, y: Int) {
 		if (canMoveTo(x, y)) {
-			jewels[0].x = board.getPosX(x);
-			jewels[0].y = board.getPosY(y);
-
-			jewels[1].x = board.getPosX(x);
-			jewels[1].y = board.getPosY(y + 1);
-
-			jewels[2].x = board.getPosX(x);
-			jewels[2].y = board.getPosY(y + 2);
+			column.moveTo(board.getPosX(x), board.getPosY(y));
 
 			this.x = x;
 			this.y = y;
@@ -66,27 +42,21 @@ class Cursor extends FlxTypedGroup<FlxSprite> {
 
 	public function step() {
 		if (!isPlaced()) {
-			jewels[0].y += board.getStepSize();
-			jewels[1].y += board.getStepSize();
-			jewels[2].y += board.getStepSize();
-
+			column.moveTo(column.x, column.y + Board.getStepSize());
 			board.middleStep = !board.middleStep;
-
 			if (!board.middleStep)
 				y++;
+
+			if (y == 0 && !board.middleStep) {
+				// It's completely visible for the first time
+				board.indicator.setValues(
+					[Std.random(Board.setSize), Std.random(Board.setSize), Std.random(Board.setSize)]);
+			}
 		}
 	}
 
 	public function shift() {
-		var jewel = jewels[2];
-
-		jewels[2].y = board.getPosY(y);
-		jewels[0].y = board.getPosY(y + 1);
-		jewels[1].y = board.getPosY(y + 2);
-
-		jewels[2] = jewels[1];
-		jewels[1] = jewels[0];
-		jewels[0] = jewel;
+		column.shift();
 	}
 
 	public function isPlaced(): Bool {
@@ -110,13 +80,19 @@ class Cursor extends FlxTypedGroup<FlxSprite> {
 
 	public function reload() {
 		move(initX, initY);
-
-		jewels[0].animation.frameIndex = Std.random(setSize);
-		jewels[1].animation.frameIndex = Std.random(setSize);
-		jewels[2].animation.frameIndex = Std.random(setSize);
-
 		board.status = Board.STATUS_FALLING;
-
 		board.middleStep = false;
+	}
+
+	public function getJewels(): Array<FlxSprite> {
+		return column.jewels;
+	}
+
+	public function getValues(): Array<Int> {
+		return column.getValues();
+	}
+
+	public function setValues(values: Array<Int>) {
+		column.setValues(values);
 	}
 }

@@ -8,11 +8,14 @@ import flixel.math.FlxPoint;
 import utils.data.Set;
 import utils.data.TilePoint;
 import ui.Cursor;
+import ui.Column;
 
 class Board {
 
 	public static var tileSize: Int = 8;
 	public static var borderSize: Int = 1;
+	public static var columnSize: Int = 10;
+	public static var setSize: Int = 6;
 
 	public static inline var STATUS_FALLING: Int = 0;
 	public static inline var STATUS_SETTLING: Int = 1;
@@ -34,6 +37,7 @@ class Board {
 
 	private var cursor: Cursor;
 	private var background: FlxSprite;
+	public var indicator: Column;
 
 	public var status: Int;
 	public var previousStatus: Int;
@@ -69,6 +73,11 @@ class Board {
 
 		cursor = new Cursor(this);
 		for (member in cursor.members)
+			gfxSet.add(member);
+
+		indicator = new Column(x + width * columnSize + columnSize + borderSize,
+			y + borderSize, cursor.getValues());
+		for (member in indicator)
 			gfxSet.add(member);
 	}
 
@@ -107,6 +116,10 @@ class Board {
 
 		if (FlxG.keys.justPressed.SPACE) {
 			cursor.shift();
+			if (cursor.y < 0) {
+				// It's still partially hidden
+				indicator.shift();
+			}
 		}
 
 		if (lastUpdated < (1.0 / speed)) {
@@ -152,8 +165,10 @@ class Board {
 
 			if (!isInbounds(cursor.x, cursor.y))
 				status = STATUS_GAMEOVER;
-			else
+			else {
+				cursor.setValues(indicator.getValues());
 				cursor.reload();
+			}
 		}
 
 		if (!cursor.isPlaced())
@@ -161,19 +176,19 @@ class Board {
 	}
 
 	public function settleCursor() {
-		var jewelA = cursor.jewels[0].clone();
+		var jewelA = cursor.getJewels()[0].clone();
 		jewelA.x = getPosX(cursor.x);
 		jewelA.y = getPosY(cursor.y);
 		boardGfx[cursor.x][cursor.y] = jewelA;
 		gfxSet.add(jewelA);
 
-		var jewelB = cursor.jewels[1].clone();
+		var jewelB = cursor.getJewels()[1].clone();
 		jewelB.x = getPosX(cursor.x);
 		jewelB.y = getPosY(cursor.y + 1);
 		boardGfx[cursor.x][cursor.y + 1] = jewelB;
 		gfxSet.add(jewelB);
 
-		var jewelC = cursor.jewels[2].clone();
+		var jewelC = cursor.getJewels()[2].clone();
 		jewelC.x = getPosX(cursor.x);
 		jewelC.y = getPosY(cursor.y + 2);
 		boardGfx[cursor.x][cursor.y + 2] = jewelC;
@@ -307,7 +322,7 @@ class Board {
 		return this.y + borderSize + y * (tileSize + borderSize * 2) + (middleStep ? getStepSize() : 0);
 	}
 
-	public function getStepSize(): Float {
+	public static function getStepSize(): Float {
 		return tileSize / 2 + borderSize;
 	}
 }
