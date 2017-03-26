@@ -10,9 +10,10 @@ class Cursor extends FlxTypedGroup<FlxSprite> {
 
 	public var x: Int;
 	public var y: Int;
+	public var frozen: Bool;
 
 	private static var initX: Int = 3;
-	private static var initY: Int = -2;
+	private static var initY: Int = -3;
 
 	public function new(board: Board) {
 		super();
@@ -21,6 +22,7 @@ class Cursor extends FlxTypedGroup<FlxSprite> {
 
 		x = initX;
 		y = initY;
+		frozen = false;
 
 		column = new Column(board.getPosX(x), board.getPosY(y),
 			[Std.random(Board.setSize), Std.random(Board.setSize), Std.random(Board.setSize)]);
@@ -41,7 +43,7 @@ class Cursor extends FlxTypedGroup<FlxSprite> {
 	}
 
 	public function step() {
-		if (!isPlaced()) {
+		if (!frozen && !isPlaced()) {
 			column.moveTo(column.x, column.y + Board.getStepSize());
 			board.middleStep = !board.middleStep;
 			if (!board.middleStep)
@@ -66,6 +68,14 @@ class Cursor extends FlxTypedGroup<FlxSprite> {
 		return board.getCellValue(x, y + 3) >= 0;
 	}
 
+	public function isFrozen(frozen: Bool) {
+		column.jewels[0].visible = !frozen;
+		column.jewels[1].visible = !frozen;
+		column.jewels[2].visible = !frozen;
+
+		this.frozen = frozen;
+	}
+
 	public function canMoveTo(x: Int, y: Int): Bool {
 		var b: Bool = x >= 0 && x < board.width;
 		var yy: Int = board.middleStep ? y + 1 : y;
@@ -84,7 +94,7 @@ class Cursor extends FlxTypedGroup<FlxSprite> {
 		board.middleStep = false;
 	}
 
-	public function getJewels(): Array<FlxSprite> {
+	public function getJewels(): Array<Jewel> {
 		return column.jewels;
 	}
 

@@ -4,7 +4,7 @@ import flixel.FlxSprite;
 import flixel.group.FlxGroup;
 
 class Column extends FlxTypedGroup<FlxSprite> {
-	public var jewels: Array<FlxSprite>;
+	public var jewels: Array<Jewel>;
 
 	public var x: Float;
 	public var y: Float;
@@ -12,21 +12,19 @@ class Column extends FlxTypedGroup<FlxSprite> {
 	public function new(x: Float, y: Float, values: Array<Int>) {
 		super();
 
-		jewels = new Array<FlxSprite>();
+		jewels = new Array<Jewel>();
 
 		this.x = x;
 		this.y = y;
+		visible = true;
 
-		var jewelA = new FlxSprite(x, y);
-		jewelA.loadGraphic("assets/images/jewel-set-1.png", true, 8, 8);
+		var jewelA = new Jewel(x, y);
 		add(jewelA);
 
-		var jewelB = new FlxSprite(x, y + 2 * Board.getStepSize());
-		jewelB.loadGraphic("assets/images/jewel-set-1.png", true, 8, 8);
+		var jewelB = new Jewel(x, y + 2 * Board.getStepSize());
 		add(jewelB);
 
-		var jewelC = new FlxSprite(x, y + 4 * Board.getStepSize());
-		jewelC.loadGraphic("assets/images/jewel-set-1.png", true, 8, 8);
+		var jewelC = new Jewel(x, y + 4 * Board.getStepSize());
 		add(jewelC);
 
 		jewels.push(jewelA);
@@ -69,16 +67,16 @@ class Column extends FlxTypedGroup<FlxSprite> {
 	}
 
 	public function setValues(values: Array<Int>) {
-		jewels[0].animation.frameIndex = values[0];
-		jewels[1].animation.frameIndex = values[1];
-		jewels[2].animation.frameIndex = values[2];
+		jewels[0].setValue(values[0]);
+		jewels[1].setValue(values[1]);
+		jewels[2].setValue(values[2]);
 	}
 
 	public function getValues(): Array<Int> {
 		return [
-			jewels[0].animation.frameIndex,
-			jewels[1].animation.frameIndex,
-			jewels[2].animation.frameIndex
+			jewels[0].getValue(),
+			jewels[1].getValue(),
+			jewels[2].getValue()
 		];
 	}
 }

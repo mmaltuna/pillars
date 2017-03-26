@@ -18,7 +18,7 @@ class KeyboardUtils {
 	public static inline var KEY_RIGHT: Int = 39;
 	public static inline var KEY_DOWN: Int = 40;
 
-	public static var REPEAT_THRESHOLD: Int = 5;
+	public static var REPEAT_THRESHOLD: Int = 10;
 
 	private function new() {
 		keyMap = new Map<Int, Int>();
@@ -73,5 +73,9 @@ class KeyboardUtils {
 			return true;
 
 		return false;
+	}
+
+	public function clearKey(key: Int) {
+		keyMap.set(key, 0);
 	}
 }

@@ -5,10 +5,13 @@ import flixel.FlxSprite;
 import flixel.group.FlxGroup;
 import flixel.math.FlxPoint;
 
+import utils.CallbackPool;
+import utils.KeyboardUtils;
 import utils.data.Set;
 import utils.data.TilePoint;
 import ui.Cursor;
 import ui.Column;
+import ui.Jewel;
 
 class Board {
 
@@ -32,7 +35,9 @@ class Board {
 	private var speed: Float = 2;		// speed = 1 => 1 step per second
 
 	private var board: Array<Array<Int>>;	// Rows, columns
-	private var boardGfx: Array<Array<FlxSprite>>;
+	private var boardGfx: Array<Array<Jewel>>;
+	private var tilesToDelete: Set<TilePoint>;
+	private var keyboardUtils: KeyboardUtils;
 	public var gfxSet: FlxTypedGroup<FlxSprite>;
 
 	private var cursor: Cursor;
@@ -53,6 +58,7 @@ class Board {
 		previousStatus = STATUS_PAUSED;
 
 		gfxSet = new FlxTypedGroup<FlxSprite>();
+		keyboardUtils = KeyboardUtils.getInstance();
 
 		background = new FlxSprite(x, y);
 		background.loadGraphic("assets/images/background-6x12.png", 60, 120);
@@ -67,9 +73,9 @@ class Board {
 			board.push(column);
 		}
 
-		boardGfx = new Array<Array<FlxSprite>>();
+		boardGfx = new Array<Array<Jewel>>();
 		for (i in 0 ... width)
-			boardGfx[i] = new Array<FlxSprite>();
+			boardGfx[i] = new Array<Jewel>();
 
 		cursor = new Cursor(this);
 		for (member in cursor.members)
@@ -82,6 +88,8 @@ class Board {
 	}
 
 	public function update(elapsed: Float) {
+		keyboardUtils.update();
+
 		switch status {
 			case STATUS_PAUSED:
 				onStatusPaused();
@@ -106,11 +114,11 @@ class Board {
 			status = STATUS_PAUSED;
 		}
 
-		if (FlxG.keys.justPressed.LEFT) {
+		if (keyboardUtils.isPressed(KeyboardUtils.KEY_LEFT)) {
 			cursor.move(cursor.x - 1, cursor.y);
-		} else if (FlxG.keys.justPressed.RIGHT) {
+		} else if (keyboardUtils.isPressed(KeyboardUtils.KEY_RIGHT)) {
 			cursor.move(cursor.x + 1, cursor.y);
-		} else if (FlxG.keys.justPressed.DOWN) {
+		} else if (keyboardUtils.isPressed(KeyboardUtils.KEY_DOWN)) {
 			cursor.step();
 		}
 
@@ -153,64 +161,13 @@ class Board {
 
 		if (lastUpdated < (1.0 / speed)) {
 			lastUpdated += elapsed;
+
+			if (!cursor.isPlaced())
+				status = STATUS_FALLING;
 		} else {
 			lastUpdated = 0;
 			settleCursor();
-
-			var totalDeleted = 1;
-			while (totalDeleted > 0) {
-				totalDeleted = deleteCombos();
-				updateBoard();
-			}
-
-			if (!isInbounds(cursor.x, cursor.y))
-				status = STATUS_GAMEOVER;
-			else {
-				cursor.setValues(indicator.getValues());
-				cursor.reload();
-			}
-		}
-
-		if (!cursor.isPlaced())
-			status = STATUS_FALLING;
-	}
-
-	public function settleCursor() {
-		var jewelA = cursor.getJewels()[0].clone();
-		jewelA.x = getPosX(cursor.x);
-		jewelA.y = getPosY(cursor.y);
-		boardGfx[cursor.x][cursor.y] = jewelA;
-		gfxSet.add(jewelA);
-
-		var jewelB = cursor.getJewels()[1].clone();
-		jewelB.x = getPosX(cursor.x);
-		jewelB.y = getPosY(cursor.y + 1);
-		boardGfx[cursor.x][cursor.y + 1] = jewelB;
-		gfxSet.add(jewelB);
-
-		var jewelC = cursor.getJewels()[2].clone();
-		jewelC.x = getPosX(cursor.x);
-		jewelC.y = getPosY(cursor.y + 2);
-		boardGfx[cursor.x][cursor.y + 2] = jewelC;
-		gfxSet.add(jewelC);
-
-		setCellValue(cursor.x, cursor.y, jewelA.animation.frameIndex);
-		setCellValue(cursor.x, cursor.y + 1, jewelB.animation.frameIndex);
-		setCellValue(cursor.x, cursor.y + 2, jewelC.animation.frameIndex);
-	}
-
-	public function getCellValue(x: Int, y: Int): Int {
-		var returnValue = -1;
-		if (isInbounds(x, y)) {
-			returnValue = board[x][y];
-		}
-
-		return returnValue;
-	}
-
-	public function setCellValue(x: Int, y: Int, value: Int) {
-		if (isInbounds(x, y)) {
-			board[x][y] = value;
+			checkForCombos();
 		}
 	}
 
@@ -261,21 +218,92 @@ class Board {
 		return positions;
 	}
 
-	public function isInbounds(x: Int, y: Int): Bool {
-		return x >= 0 && x < width && y >= 0 && y < height;
+	public function checkForCombos() {
+		tilesToDelete = findCombos();
+
+		if (!tilesToDelete.isEmpty()) {
+			cursor.isFrozen(true);
+
+			var callbackPool: CallbackPool = new CallbackPool(tilesToDelete.size());
+			tilesToDelete.forEach(function(pos) {
+				setCellValue(pos.x, pos.y, -1);
+
+				var jewel = boardGfx[pos.x][pos.y];
+				jewel.animation.play(Std.string(jewel.getValue()) + "-flicker");
+				jewel.animation.finishCallback = function(animationName: String) {
+					jewel.animation.play("vanish");
+					jewel.animation.finishCallback = function(animationName: String) {
+						callbackPool.onCallback(onCombosDeleted);
+					};
+				};
+			});
+		} else {
+			if (cursor.isPlaced() && !isInbounds(cursor.x, cursor.y)) {
+				trace('gameover');
+				status = STATUS_GAMEOVER;
+			} else {
+				cursor.isFrozen(false);
+				//cursor.move(cursor.x, cursor.y);
+				//cursor.reload();
+				keyboardUtils.clearKey(KeyboardUtils.KEY_DOWN);
+			}
+		}
 	}
 
-	public function deleteCombos(): Int {
-		var jewelsToDelete: Set<TilePoint> = findCombos();
-		if (!jewelsToDelete.isEmpty()) {
-			jewelsToDelete.forEach(function(pos) {
-				setCellValue(pos.x, pos.y, -1);
-				boardGfx[pos.x][pos.y].destroy();
-				boardGfx[pos.x][pos.y] = null;
-			});
+	public function onCombosDeleted() {
+		tilesToDelete.forEach(function(pos) {
+			boardGfx[pos.x][pos.y].destroy();
+			boardGfx[pos.x][pos.y] = null;
+		});
+
+		updateBoard();
+		checkForCombos();
+	}
+
+	public function settleCursor() {
+		var jewelA = cursor.getJewels()[0].clone();
+		jewelA.x = getPosX(cursor.x);
+		jewelA.y = getPosY(cursor.y);
+		boardGfx[cursor.x][cursor.y] = jewelA;
+		gfxSet.add(jewelA);
+
+		var jewelB = cursor.getJewels()[1].clone();
+		jewelB.x = getPosX(cursor.x);
+		jewelB.y = getPosY(cursor.y + 1);
+		boardGfx[cursor.x][cursor.y + 1] = jewelB;
+		gfxSet.add(jewelB);
+
+		var jewelC = cursor.getJewels()[2].clone();
+		jewelC.x = getPosX(cursor.x);
+		jewelC.y = getPosY(cursor.y + 2);
+		boardGfx[cursor.x][cursor.y + 2] = jewelC;
+		gfxSet.add(jewelC);
+
+		setCellValue(cursor.x, cursor.y, jewelA.getValue());
+		setCellValue(cursor.x, cursor.y + 1, jewelB.getValue());
+		setCellValue(cursor.x, cursor.y + 2, jewelC.getValue());
+
+		cursor.setValues(indicator.getValues());
+		cursor.reload();
+	}
+
+	public function getCellValue(x: Int, y: Int): Int {
+		var returnValue = -1;
+		if (isInbounds(x, y)) {
+			returnValue = board[x][y];
 		}
 
-		return jewelsToDelete.size();
+		return returnValue;
+	}
+
+	public function setCellValue(x: Int, y: Int, value: Int) {
+		if (isInbounds(x, y)) {
+			board[x][y] = value;
+		}
+	}
+
+	public function isInbounds(x: Int, y: Int): Bool {
+		return x >= 0 && x < width && y >= 0 && y < height;
 	}
 
 	public function updateBoard() {
@@ -285,7 +313,7 @@ class Board {
 
 	public function pushToBottom(column: Int) {
 		var jewels = new Array<Int>();
-		var sprites = new Array<FlxSprite>();
+		var sprites = new Array<Jewel>();
 
 		for (j in 0 ... height) {
 			if (getCellValue(column, j) > -1) {
