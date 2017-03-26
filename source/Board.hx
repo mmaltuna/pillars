@@ -34,8 +34,7 @@ class Board {
 	private var lastUpdated: Float = 0;
 	private var speed: Float = 2;		// speed = 1 => 1 step per second
 
-	private var board: Array<Array<Int>>;	// Rows, columns
-	private var boardGfx: Array<Array<Jewel>>;
+	private var board: Array<Array<Jewel>>;	// Rows, columns
 	private var tilesToDelete: Set<TilePoint>;
 	private var keyboardUtils: KeyboardUtils;
 	public var gfxSet: FlxTypedGroup<FlxSprite>;
@@ -64,18 +63,9 @@ class Board {
 		background.loadGraphic("assets/images/background-6x12.png", 60, 120);
 		gfxSet.add(background);
 
-		board = new Array<Array<Int>>();
-		for (i in 0 ... width) {
-			var column = new Array<Int>();
-			for (j in 0 ... height) {
-				column.push(-1);
-			}
-			board.push(column);
-		}
-
-		boardGfx = new Array<Array<Jewel>>();
+		board = new Array<Array<Jewel>>();
 		for (i in 0 ... width)
-			boardGfx[i] = new Array<Jewel>();
+			board[i] = new Array<Jewel>();
 
 		cursor = new Cursor(this);
 		for (member in cursor.members)
@@ -226,9 +216,7 @@ class Board {
 
 			var callbackPool: CallbackPool = new CallbackPool(tilesToDelete.size());
 			tilesToDelete.forEach(function(pos) {
-				setCellValue(pos.x, pos.y, -1);
-
-				var jewel = boardGfx[pos.x][pos.y];
+				var jewel = board[pos.x][pos.y];
 				jewel.animation.play(Std.string(jewel.getValue()) + "-flicker");
 				jewel.animation.finishCallback = function(animationName: String) {
 					jewel.animation.play("vanish");
@@ -243,8 +231,6 @@ class Board {
 				status = STATUS_GAMEOVER;
 			} else {
 				cursor.isFrozen(false);
-				//cursor.move(cursor.x, cursor.y);
-				//cursor.reload();
 				keyboardUtils.clearKey(KeyboardUtils.KEY_DOWN);
 			}
 		}
@@ -252,8 +238,8 @@ class Board {
 
 	public function onCombosDeleted() {
 		tilesToDelete.forEach(function(pos) {
-			boardGfx[pos.x][pos.y].destroy();
-			boardGfx[pos.x][pos.y] = null;
+			board[pos.x][pos.y].destroy();
+			board[pos.x][pos.y] = null;
 		});
 
 		updateBoard();
@@ -264,19 +250,19 @@ class Board {
 		var jewelA = cursor.getJewels()[0].clone();
 		jewelA.x = getPosX(cursor.x);
 		jewelA.y = getPosY(cursor.y);
-		boardGfx[cursor.x][cursor.y] = jewelA;
+		board[cursor.x][cursor.y] = jewelA;
 		gfxSet.add(jewelA);
 
 		var jewelB = cursor.getJewels()[1].clone();
 		jewelB.x = getPosX(cursor.x);
 		jewelB.y = getPosY(cursor.y + 1);
-		boardGfx[cursor.x][cursor.y + 1] = jewelB;
+		board[cursor.x][cursor.y + 1] = jewelB;
 		gfxSet.add(jewelB);
 
 		var jewelC = cursor.getJewels()[2].clone();
 		jewelC.x = getPosX(cursor.x);
 		jewelC.y = getPosY(cursor.y + 2);
-		boardGfx[cursor.x][cursor.y + 2] = jewelC;
+		board[cursor.x][cursor.y + 2] = jewelC;
 		gfxSet.add(jewelC);
 
 		setCellValue(cursor.x, cursor.y, jewelA.getValue());
@@ -289,8 +275,8 @@ class Board {
 
 	public function getCellValue(x: Int, y: Int): Int {
 		var returnValue = -1;
-		if (isInbounds(x, y)) {
-			returnValue = board[x][y];
+		if (isInbounds(x, y) && board[x][y] != null) {
+			returnValue = board[x][y].getValue();
 		}
 
 		return returnValue;
@@ -298,7 +284,10 @@ class Board {
 
 	public function setCellValue(x: Int, y: Int, value: Int) {
 		if (isInbounds(x, y)) {
-			board[x][y] = value;
+			if (board[x][y] == null)
+				board[x][y] = new Jewel(getPosX(x), getPosY(y));
+
+			board[x][y].setValue(value);
 		}
 	}
 
@@ -312,24 +301,20 @@ class Board {
 	}
 
 	public function pushToBottom(column: Int) {
-		var jewels = new Array<Int>();
-		var sprites = new Array<Jewel>();
+		var jewels = new Array<Jewel>();
 
 		for (j in 0 ... height) {
 			if (getCellValue(column, j) > -1) {
-				jewels.push(getCellValue(column, j));
-				sprites.push(boardGfx[column][j]);
+				jewels.push(board[column][j]);
 			}
 		}
 
 		for (j in 0 ... height) {
 			if (jewels.length > 0) {
-				setCellValue(column, height - j - 1, jewels.pop());
-				boardGfx[column][height - j - 1] = sprites.pop();
-				boardGfx[column][height - j - 1].y = getPosY(height - j - 1);
+				board[column][height - j - 1] = jewels.pop();
+				board[column][height - j - 1].y = getPosY(height - j - 1);
 			} else {
-				setCellValue(column, height - j - 1, -1);
-				boardGfx[column][height - j - 1] = null;
+				board[column][height - j - 1] = null;
 			}
 		}
 	}
