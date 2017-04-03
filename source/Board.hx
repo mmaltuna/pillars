@@ -9,6 +9,7 @@ import utils.CallbackPool;
 import utils.KeyboardUtils;
 import utils.data.Set;
 import utils.data.TilePoint;
+import utils.Combo;
 import ui.Cursor;
 import ui.Column;
 import ui.Jewel;
@@ -162,50 +163,47 @@ class Board {
 	}
 
 	private function findCombos(): Set<TilePoint> {
-		var positions: Set<TilePoint> = new Set<TilePoint>(TilePoint.equals);
+		var combos: Combos = new Combos();
 
 		for (i in 0 ... width) {
 			for (j in 0 ... height) {
-				positions.addAll(findCombosPosition(i, j));
+				findCombosPosition(i, j).forEach(function(combo) {
+					combos.addCombo(combo);
+				});
 			}
 		}
 
-		return positions;
+		return combos.getPositions();
 	}
 
-	private function findCombosPosition(x: Int, y: Int): Set<TilePoint> {
+	private function findCombosPosition(x: Int, y: Int): Combos {
 		var v = getCellValue(x, y);
-		var positions: Set<TilePoint> = new Set<TilePoint>(TilePoint.equals);
+		var combos: Combos = new Combos();
 
 		if (v > -1) {
-			var combos: Array<Array<TilePoint>> = new Array<Array<TilePoint>>();
 			for (i in [-1, 0, 1]) {
 				for (j in [-1, 0, 1]) {
 					var k: Int = 1;
-					var combo: Array<TilePoint> = null;
+					var combo: Combo = null;
 
 					while ((i != 0 || j != 0) && isInbounds(x + i * k, y + j * k) && getCellValue(x + i * k, y + j * k) == v) {
 						if (combo == null) {
-							combo = new Array<TilePoint>();
-							combo.push(new TilePoint(x, y));
+							combo = new Combo();
+							combo.addPosition(new TilePoint(x, y));
 						}
 
-						combo.push(new TilePoint(x + i * k, y + j * k));
+						combo.addPosition(new TilePoint(x + i * k, y + j * k));
 
 						k++;
 					}
 
-					if (combo != null && combo.length >= 3)
-						combos.push(combo);
+					if (combo != null && combo.size() >= 3)
+						combos.addCombo(combo);
 				}
 			}
-
-			for (combo in combos)
-				for (pos in combo)
-					positions.add(pos);
 		}
 
-		return positions;
+		return combos;
 	}
 
 	public function checkForCombos() {
