@@ -31,6 +31,8 @@ class PlayState extends FlxState {
 		foreground = new FlxSprite(0, 0);
 		foreground.loadGraphic("assets/images/foreground-6x12.png", 160, 144);
 		add(foreground);
+
+		add(board.textSet);
 	}
 
 	override public function update(elapsed: Float) {

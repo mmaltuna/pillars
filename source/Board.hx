@@ -4,6 +4,8 @@ import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.group.FlxGroup;
 import flixel.math.FlxPoint;
+import flixel.text.FlxText;
+import flixel.util.FlxColor;
 
 import utils.CallbackPool;
 import utils.KeyboardUtils;
@@ -19,6 +21,7 @@ class Board {
 	public static var tileSize: Int = 8;
 	public static var borderSize: Int = 1;
 	public static var columnSize: Int = 10;
+	public static var rowSize: Int = 10;
 	public static var setSize: Int = 6;
 
 	public static inline var STATUS_FALLING: Int = 0;
@@ -43,6 +46,7 @@ class Board {
 	private var currentCombos: Combos;
 	private var keyboardUtils: KeyboardUtils;
 	public var gfxSet: FlxTypedGroup<FlxSprite>;
+	public var textSet: FlxTypedGroup<FlxText>;
 
 	private var cursor: Cursor;
 	private var background: FlxSprite;
@@ -67,6 +71,7 @@ class Board {
 		previousStatus = STATUS_PAUSED;
 
 		gfxSet = new FlxTypedGroup<FlxSprite>();
+		textSet = new FlxTypedGroup<FlxText>();
 		keyboardUtils = KeyboardUtils.getInstance();
 
 		background = new FlxSprite(x, y);
@@ -85,6 +90,12 @@ class Board {
 			y + borderSize, cursor.getValues());
 		for (member in indicator)
 			gfxSet.add(member);
+
+		var totalScoreLabel: FlxText = new FlxText(
+			x + width * columnSize + columnSize,
+			y + 2 * borderSize + 3* rowSize, "Score:");
+		totalScoreLabel.setFormat("assets/fonts/font-pixel-7.ttf", 16, FlxTextBorderStyle.NONE, FlxColor.WHITE);
+		textSet.add(totalScoreLabel);
 	}
 
 	public function update(elapsed: Float) {
