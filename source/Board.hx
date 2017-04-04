@@ -33,10 +33,14 @@ class Board {
 	private var x: Int;
 	private var y: Int;
 	private var lastUpdated: Float = 0;
-	private var speed: Float = 2;		// speed = 1 => 1 step per second
+
+	private var speed: Float;		// speed = 1 => 1 step per second
+	private var level: Int;
+	private var totalScore: Int;
+	private var comboChain: Int;
 
 	private var board: Array<Array<Jewel>>;	// Rows, columns
-	private var tilesToDelete: Set<TilePoint>;
+	private var currentCombos: Combos;
 	private var keyboardUtils: KeyboardUtils;
 	public var gfxSet: FlxTypedGroup<FlxSprite>;
 
@@ -53,6 +57,11 @@ class Board {
 
 		this.x = x;
 		this.y = y;
+
+		speed = 2;
+		level = 1;
+		totalScore = 0;
+		comboChain = 0;
 
 		status = STATUS_FALLING;
 		previousStatus = STATUS_PAUSED;
@@ -162,7 +171,7 @@ class Board {
 		}
 	}
 
-	private function findCombos(): Set<TilePoint> {
+	private function findCombos(): Combos {
 		var combos: Combos = new Combos();
 
 		for (i in 0 ... width) {
@@ -173,7 +182,7 @@ class Board {
 			}
 		}
 
-		return combos.getPositions();
+		return combos;
 	}
 
 	private function findCombosPosition(x: Int, y: Int): Combos {
@@ -207,13 +216,14 @@ class Board {
 	}
 
 	public function checkForCombos() {
-		tilesToDelete = findCombos();
+		comboChain++;
+		currentCombos = findCombos();
 
-		if (!tilesToDelete.isEmpty()) {
+		if (!currentCombos.getPositions().isEmpty()) {
 			cursor.isFrozen(true);
 
-			var callbackPool: CallbackPool = new CallbackPool(tilesToDelete.size());
-			tilesToDelete.forEach(function(pos) {
+			var callbackPool: CallbackPool = new CallbackPool(currentCombos.getPositions().size());
+			currentCombos.getPositions().forEach(function(pos) {
 				var jewel = board[pos.x][pos.y];
 				jewel.animation.play(Std.string(jewel.getValue()) + "-flicker");
 				jewel.animation.finishCallback = function(animationName: String) {
@@ -224,6 +234,8 @@ class Board {
 				};
 			});
 		} else {
+			comboChain = 0;
+
 			if (cursor.isPlaced() && !isInbounds(cursor.x, cursor.y)) {
 				trace('gameover');
 				status = STATUS_GAMEOVER;
@@ -235,13 +247,28 @@ class Board {
 	}
 
 	public function onCombosDeleted() {
-		tilesToDelete.forEach(function(pos) {
+		updateScore();
+
+		currentCombos.getPositions().forEach(function(pos) {
 			board[pos.x][pos.y].destroy();
 			board[pos.x][pos.y] = null;
 		});
 
 		updateBoard();
 		checkForCombos();
+	}
+
+	public function updateScore() {
+		totalScore += level * comboChain * currentCombos.getScore();
+		trace('totalScore = ' + totalScore);
+
+		var nextLevelScore: Int = Std.int((level + 1) * level * 1000 / 2);
+
+		if (totalScore >= nextLevelScore) {
+			trace('Level = ' + level + 1);
+			level++;
+			speed += 0.5;
+		}
 	}
 
 	public function settleCursor() {

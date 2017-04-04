@@ -16,7 +16,7 @@ class Combo extends Set<TilePoint> {
 	}
 
 	public function getScore(): Int {
-		return size() * 10;
+		return size() * 10 * Utils.max(1, size() - 2);
 	}
 
 	public function doesContain(combo: Combo): Bool {
@@ -64,7 +64,7 @@ class Combos extends Set<Combo> {
 			totalScore += combo.getScore();
 		});
 
-		return totalScore;
+		return totalScore * size();
 	}
 
 	public function getPositions(): Set<TilePoint> {
