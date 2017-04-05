@@ -47,6 +47,7 @@ class Board {
 	private var keyboardUtils: KeyboardUtils;
 	public var gfxSet: FlxTypedGroup<FlxSprite>;
 	public var textSet: FlxTypedGroup<FlxText>;
+	private var textScore: FlxText;
 
 	private var cursor: Cursor;
 	private var background: FlxSprite;
@@ -91,11 +92,13 @@ class Board {
 		for (member in indicator)
 			gfxSet.add(member);
 
-		var totalScoreLabel: FlxText = new FlxText(
-			x + width * columnSize + columnSize,
-			y + 2 * borderSize + 3* rowSize, "Score:");
-		totalScoreLabel.setFormat("assets/fonts/font-pixel-7.ttf", 16, FlxTextBorderStyle.NONE, FlxColor.WHITE);
+		var totalScoreLabel: FlxText = new FlxText(x + (width + 1) * columnSize, y + 2 * borderSize + 3 * rowSize, "Score:");
+		totalScoreLabel.setFormat("assets/fonts/font-pixel-7.ttf", 16, FlxColor.WHITE, FlxTextBorderStyle.NONE);
 		textSet.add(totalScoreLabel);
+
+		textScore = new FlxText(x + (width + 1) * columnSize, y + 2 * borderSize + 3 * rowSize + 12, 32, "0");
+		textScore.setFormat("assets/fonts/font-pixel-7.ttf", 16, FlxColor.WHITE, FlxTextAlign.RIGHT, FlxTextBorderStyle.NONE);
+		textSet.add(textScore);
 	}
 
 	public function update(elapsed: Float) {
@@ -271,14 +274,16 @@ class Board {
 
 	public function updateScore() {
 		totalScore += level * comboChain * currentCombos.getScore();
-		trace('totalScore = ' + totalScore);
+		textScore.text = Std.string(totalScore);
 
 		var nextLevelScore: Int = Std.int((level + 1) * level * 1000 / 2);
 
 		if (totalScore >= nextLevelScore) {
-			trace('Level = ' + level + 1);
 			level++;
 			speed += 0.5;
+
+			trace('level = ' + level);
+			trace('speed = ' + speed);
 		}
 	}
 
