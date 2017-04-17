@@ -5,8 +5,11 @@ import utils.data.TilePoint;
 
 class Combo extends Set<TilePoint> {
 
-	public function new() {
+	public var value: Int;
+
+	public function new(value: Int) {
 		super(TilePoint.equals);
+		this.value = value;
 	}
 
 	public function addPosition(position: TilePoint) {
@@ -37,6 +40,27 @@ class Combo extends Set<TilePoint> {
 
 		return a.doesContain(b) && b.doesContain(a);
 	}
+
+	public static function canMerge(a: Combo, b: Combo): Bool {
+		if (a.value != b.value)
+			return false;
+
+		var matches: Bool = false;
+		a.forEach(function(pos) {
+			matches = matches || b.contains(pos);
+		});
+
+		if (matches) return matches;
+
+		a.forEach(function(posA) {
+			b.forEach(function(posB) {
+				var distance: Int = Utils.abs(posA.x - posB.x) + Utils.abs(posA.y - posB.y);
+				matches = matches || (distance == 1);
+			});
+		});
+
+		return matches;
+	}
 }
 
 class Combos extends Set<Combo> {
@@ -50,10 +74,26 @@ class Combos extends Set<Combo> {
 
 	public function addCombo(combo: Combo) {
 		if (!doesContain(combo)) {
-			add(combo);
+
+			// Check if the new combo can be merged with an existing one
+			var merged: Bool = false;
+			forEach(function(eCombo) {
+				if (!merged && Combo.canMerge(combo, eCombo)) {
+					merged = true;
+
+					combo.forEach(function(pos) {
+						eCombo.addPosition(pos);
+					});
+				}
+			});
+
+			// Add all positions to be deleted
 			combo.forEach(function(position) {
 				positions.add(position);
 			});
+
+			if (!merged)
+				add(combo);
 		}
 	}
 

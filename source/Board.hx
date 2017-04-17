@@ -211,7 +211,7 @@ class Board {
 
 					while ((i != 0 || j != 0) && isInbounds(x + i * k, y + j * k) && getCellValue(x + i * k, y + j * k) == v) {
 						if (combo == null) {
-							combo = new Combo();
+							combo = new Combo(v);
 							combo.addPosition(new TilePoint(x, y));
 						}
 
